@@ -1,0 +1,11 @@
+{% extends "base.html" %}{% block body %}
+<h2>Photo — {{ s.name }}</h2>
+<div class="card" style="max-width:420px">
+<p>ID: <b>{{ s.roll }}</b> · Mess: {{ s.mess_name or '—' }}</p>
+{% set v = photo_v(s.id) %}
+{% if v %}<img class="vphoto" style="border-color:var(--line)" src="/photo/{{ s.id }}?v={{ v }}">{% else %}<p style="color:var(--mut)">No photo yet.</p>{% endif %}
+<form method="post" enctype="multipart/form-data" class="row" style="margin-top:10px">
+<input type="file" name="photo" accept="image/*" capture="user" required><button>{{ 'Replace photo' if v else 'Upload photo' }}</button></form>
+{% if v %}<form method="post" style="margin-top:10px"><input type="hidden" name="act" value="delete"><button class="red" onclick="return confirm('Remove this photo?')">Remove photo</button></form>{% endif %}
+<p style="margin-top:14px"><a href="/admin/students">‹ Back to students</a></p></div>
+{% endblock %}

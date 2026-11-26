@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block head %}<meta http-equiv="refresh" content="30">{% endblock %}
+{% block body %}
+<h2>All Messes — Dashboard</h2>
+<p style="color:var(--mut);margin-top:-8px">{{ today }} · auto-refreshes every 30 s</p>
+
+<div class="kpis">
+  <div class="kpi"><b>{{ st|length }}</b><span>Messes</span></div>
+  <div class="kpi"><b>{{ registered }}</b><span>Students allotted</span></div>
+  <div class="kpi"><b>{{ total_entered }}</b><span>Entries today (all meals)</span></div>
+  <div class="kpi"><b>{{ unalloc }}</b><span>Students without a mess</span></div>
+  <div class="kpi"><b>{{ nophoto }}</b><span>Students without photo</span></div>
+</div>
+{% if unalloc %}<div class="flash err">{{ unalloc }} active students have no mess yet — <a href="/admin/students?mess=none">allocate them</a>.</div>{% endif %}
+
+<div class="card" style="overflow-x:auto">
+<table>
+<tr><th rowspan="2">Mess</th><th rowspan="2">Registered</th>
+<th colspan="3" style="text-align:center">Today: entered / expected</th>
+<th colspan="3" style="text-align:center">Prepare tomorrow</th></tr>
+<tr>{% for m in MEALS %}<th><span class="tag {{ m }}">{{ META[m].label }}</span></th>{% endfor %}
+{% for m in MEALS %}<th><span class="tag {{ m }}">{{ META[m].label }}</span></th>{% endfor %}</tr>
+{% for mid, s in st.items() %}<tr>
+<td><a href="/report?mess={{ mid }}"><b>{{ s.name }}</b></a></td><td>{{ s.registered }}</td>
+{% for m in MEALS %}<td>{{ s.meals[m].entered }} / {{ s.meals[m].expected }}</td>{% endfor %}
+{% for m in MEALS %}<td><b>{{ st2[mid].meals[m].expected }}</b></td>{% endfor %}</tr>
+{% else %}<tr><td colspan="8" style="color:var(--mut)">No mess yet — <a href="/admin/messes">add one</a>.</td></tr>{% endfor %}
+<tr style="background:#f1f5f9;font-weight:700"><td>TOTAL</td><td>{{ registered }}</td>
+{% for m in MEALS %}<td>{{ tot[m].entered }} / {{ tot[m].expected }}</td>{% endfor %}
+{% for m in MEALS %}<td>{{ tot[m].tomorrow }}</td>{% endfor %}</tr>
+</table></div>
+{% endblock %}

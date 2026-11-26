@@ -1,0 +1,111 @@
+{% extends "base.html" %}{% block body %}
+<h2>📷 Scan student QR</h2>
+<div class="scanwrap"><video id="v" playsinline muted autoplay></video><div class="scanframe"></div></div>
+<canvas id="c" style="display:none"></canvas>
+<div id="scanmsg">Starting camera…</div>
+<div class="row" style="justify-content:center;margin-bottom:14px">
+  <button type="button" id="flip" class="gray">🔄 Switch camera</button>
+  <label class="btn gray" style="margin:0">📸 Take photo of QR<input id="shot" type="file" accept="image/*" capture="environment" hidden></label>
+</div>
+<form id="manual" class="card row" style="max-width:520px;margin:0 auto"><input id="mcode" placeholder="Or type the 6-digit code" inputmode="numeric" maxlength="6" style="flex:1;font-size:20px"><button>Verify</button></form>
+
+<div id="res" onclick="closeRes()"></div>
+
+<script src="{{ url_for('static', filename='jsQR.js') }}"></script>
+<script>
+const video=document.getElementById('v'), canvas=document.getElementById('c'),
+      ctx=canvas.getContext('2d',{willReadFrequently:true}), msg=document.getElementById('scanmsg'),
+      res=document.getElementById('res');
+let stream=null, facing='environment', paused=false, lastCode='', lastAt=0, closeTimer=null, wake=null;
+const LABEL={ok:['✓ ALLOW','ok'],used:['✗ ALREADY USED','bad'],wrongmeal:['WRONG MEAL TIME','warn'],
+             wrongmess:['✗ WRONG MESS','bad'],blocked:['✗ STUDENT BLOCKED','bad'],invalid:['✗ INVALID CODE','bad']};
+
+function beep(ok){try{const a=new (window.AudioContext||window.webkitAudioContext)(),o=a.createOscillator(),g=a.createGain();
+  o.connect(g);g.connect(a.destination);o.frequency.value=ok?880:220;g.gain.value=.15;o.start();o.stop(a.currentTime+(ok?.15:.45));}catch(e){}}
+function extract(t){const m=t.match(/\/v\/(\d{6})\b/)||t.match(/^\s*(\d{6})\s*$/);return m?m[1]:null;}
+function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+
+async function verify(code){
+  if(paused) return;
+  paused=true; lastCode=code; lastAt=Date.now();
+  let d;
+  try{
+    const r=await fetch('/api/verify',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code})});
+    if(r.status===401||r.redirected){location.href='/login?next=/scan';return;}
+    d=await r.json();
+  }catch(e){paused=false;msg.textContent='Network error — try again';return;}
+  const [title,cls]=LABEL[d.status]||LABEL.invalid;
+  let h='';
+  if(d.photo) h+='<img class="vphoto" src="'+esc(d.photo)+'">';
+  else if(d.name && d.status!=='wrongmess') h+='<div class="nophoto">📷 No photo on record — check ID card</div>';
+  h+='<h1>'+title+'</h1>';
+  if(d.name){h+='<div class="nm">'+esc(d.name)+'</div><div>ID: '+esc(d.roll)+'</div><div style="margin-top:8px;font-size:20px">'+esc(d.meal)+'</div>';}
+  if(d.status==='wrongmess') h+='<div style="margin-top:10px;font-size:20px">Allotted to <b>'+esc(d.mess_name)+'</b></div>';
+  if(d.status==='used') h+='<div style="margin-top:8px">Entered at '+esc(d.used_at)+'</div>';
+  if(d.status==='wrongmeal') h+='<div style="margin-top:8px">Current meal: '+esc(d.current_meal||'none')+'</div>';
+  if(d.status==='invalid') h+='<div>Code not found for today. Ask the student to open the page again.</div>';
+  h+='<small>Tap anywhere for next scan'+(d.status==='ok'?' (auto in 4 s)':'')+'</small>';
+  res.className=cls; res.innerHTML=h; res.style.display='flex';
+  beep(d.status==='ok'); if(navigator.vibrate) navigator.vibrate(d.status==='ok'?80:[120,60,120]);
+
+  // Physical access is possible only in the Android supervisor app, and only
+  // after the server issues and accepts a one-time ticket for this successful scan.
+  if(d.status==='ok' && d.unlock_ticket && window.AndroidBridge && window.AndroidBridge.sendUnlock){
+    try {
+      const gate = await fetch('/api/consume-unlock', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({ticket:d.unlock_ticket})
+      });
+      const auth = await gate.json();
+      if(gate.ok && auth.authorized){
+        window.AndroidBridge.sendUnlock();
+      }
+    } catch(e) { console.error('Door controller authorization failed', e); }
+  }
+  clearTimeout(closeTimer); if(d.status==='ok') closeTimer=setTimeout(closeRes,4000);
+}
+function closeRes(){clearTimeout(closeTimer);res.style.display='none';paused=false;msg.textContent='Point the camera at the student\'s QR';}
+
+function found(text){
+  const code=extract(text);
+  if(!code){msg.textContent='Not a mess QR code';return false;}
+  if(code===lastCode && Date.now()-lastAt<8000) return false;   // same QR still in view
+  verify(code); return true;
+}
+function tick(){
+  if(stream && !paused && video.readyState===video.HAVE_ENOUGH_DATA){
+    const w=video.videoWidth,h=video.videoHeight,sc=Math.min(1,640/w);
+    canvas.width=Math.round(w*sc);canvas.height=Math.round(h*sc);
+    ctx.drawImage(video,0,0,canvas.width,canvas.height);
+    const im=ctx.getImageData(0,0,canvas.width,canvas.height);
+    const r=jsQR(im.data,im.width,im.height,{inversionAttempts:'dontInvert'});
+    if(r) found(r.data);
+  }
+  setTimeout(()=>requestAnimationFrame(tick),130);
+}
+async function start(){
+  if(stream){stream.getTracks().forEach(t=>t.stop());stream=null;}
+  if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){
+    msg.innerHTML='Camera is blocked on this address. Open the secure <b>https://</b> link, or use “Take photo of QR” / type the code.';return;}
+  try{
+    stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:facing},width:{ideal:1280},height:{ideal:720}},audio:false});
+    video.srcObject=stream; await video.play();
+    msg.textContent='Point the camera at the student\'s QR';
+    try{wake=await navigator.wakeLock.request('screen');}catch(e){}
+  }catch(e){msg.textContent='Camera not available: '+(e.name==='NotAllowedError'?'permission denied — allow camera for this site':e.message);}
+}
+document.getElementById('flip').onclick=()=>{facing=facing==='environment'?'user':'environment';start();};
+document.getElementById('manual').onsubmit=e=>{e.preventDefault();const c=document.getElementById('mcode').value.trim();
+  if(/^\d{6}$/.test(c)){document.getElementById('mcode').value='';verify(c);}else msg.textContent='Enter the 6-digit code';};
+document.getElementById('shot').onchange=async e=>{
+  const f=e.target.files[0]; if(!f) return;
+  const bmp=await createImageBitmap(f); const sc=Math.min(1,1200/Math.max(bmp.width,bmp.height));
+  canvas.width=Math.round(bmp.width*sc);canvas.height=Math.round(bmp.height*sc);ctx.drawImage(bmp,0,0,canvas.width,canvas.height);
+  const im=ctx.getImageData(0,0,canvas.width,canvas.height);const r=jsQR(im.data,im.width,im.height);
+  e.target.value=''; if(r){lastCode='';found(r.data);}else msg.textContent='QR not found in the photo — try again, closer and steady';
+};
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&stream&&wake===null){try{navigator.wakeLock.request('screen').then(w=>wake=w);}catch(e){}}});
+window.addEventListener('pagehide',()=>{if(stream)stream.getTracks().forEach(t=>t.stop());});
+start(); tick();
+</script>
+{% endblock %}

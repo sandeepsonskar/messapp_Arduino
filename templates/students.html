@@ -1,0 +1,44 @@
+{% extends "base.html" %}{% block body %}
+<h2>Students ({{ total }})</h2>
+<div class="grid3">
+<div class="card"><h3>Add student</h3><form method="post"><input type="hidden" name="act" value="add">
+<div class="row"><input name="roll" placeholder="ID / Roll No" required><input name="name" placeholder="Name" required>
+<select name="mess_id"><option value="">— no mess yet —</option>{% for m in messes %}<option value="{{ m.id }}">{{ m.name }}</option>{% endfor %}</select>
+<input name="password" placeholder="Password (default = ID)"><button>Add</button></div></form></div>
+<div class="card"><h3>Bulk import (CSV)</h3><form method="post" enctype="multipart/form-data"><input type="hidden" name="act" value="csv">
+<p style="font-size:13px;color:var(--mut)">Columns: <code>roll,name,mess,password</code> — mess = exact mess name (optional), password optional (default = ID). Every student must change the password at first login. 5000 rows take ~30 s.</p>
+<input type="file" name="csv" accept=".csv" required> <button>Import</button></form></div>
+<div class="card"><h3>Photos</h3><form method="post" enctype="multipart/form-data"><input type="hidden" name="act" value="photos_zip">
+<p style="font-size:13px;color:var(--mut)">ZIP of images named by student ID (e.g. <code>R0001.jpg</code>). Upload ~1000 per ZIP. Single photos: click 📷 on a row.</p>
+<input type="file" name="zip" accept=".zip" required> <button>Upload ZIP</button></form>
+<p style="font-size:13px;margin-top:8px"><a href="/admin/no_photo.csv">⬇ Students without photo (CSV)</a></p></div>
+<div class="card"><h3>Allocate to a mess</h3>
+<form method="post" class="row"><input type="hidden" name="act" value="prefix">
+<input name="prefix" placeholder="IDs starting with…" style="width:150px"><select name="mess_id">{% for m in messes %}<option value="{{ m.id }}">{{ m.name }}</option>{% endfor %}</select><button class="gray">Allot by ID prefix</button></form>
+<form method="post" style="margin-top:8px"><input type="hidden" name="act" value="autosplit"><button class="gray" onclick="return confirm('Split ALL unallocated students equally across the messes?')">Auto-split unallocated equally</button></form>
+<p style="font-size:12px;color:var(--mut)">Or tick students in the table below and move them.</p></div>
+</div>
+
+<div class="card">
+<form class="row" method="get"><input name="s" value="{{ term }}" placeholder="Search ID or name">
+<select name="mess"><option value="all">All messes</option><option value="none" {{ 'selected' if mf=='none' }}>Unallocated</option>
+{% for m in messes %}<option value="{{ m.id }}" {{ 'selected' if mf==m.id|string }}>{{ m.name }}</option>{% endfor %}</select><button class="gray">Filter</button></form>
+
+<form method="post">
+<div class="row" style="margin:10px 0"><select name="mess_id"><option value="none">— remove mess —</option>{% for m in messes %}<option value="{{ m.id }}">{{ m.name }}</option>{% endfor %}</select>
+<button name="act" value="allocate">Move ticked students</button></div>
+<div style="overflow-x:auto"><table><tr><th><input type="checkbox" onclick="document.querySelectorAll('.ck').forEach(c=>c.checked=this.checked)" style="padding:0"></th><th>Photo</th><th>ID</th><th>Name</th><th>Mess</th><th>Status</th><th></th></tr>
+{% for r in rows %}<tr><td><input class="ck" type="checkbox" name="ids" value="{{ r.id }}" style="padding:0"></td><td>{% set v = photo_v(r.id) %}<a href="/admin/photo/{{ r.id }}" title="Add / change photo">{% if v %}<img class="thumb" src="/photo/{{ r.id }}?v={{ v }}">{% else %}📷{% endif %}</a></td>
+<td>{{ r.roll }}</td><td>{{ r.name }}</td>
+<td>{{ r.mess_name or '—' }}</td><td>{{ 'Active' if r.active else 'Blocked' }}</td><td style="white-space:nowrap">
+<button name="rowact" value="toggle:{{ r.id }}" class="gray">{{ 'Block' if r.active else 'Unblock' }}</button>
+<button name="rowact" value="reset:{{ r.id }}" class="gray">Reset PW</button>
+<button name="rowact" value="delete:{{ r.id }}" class="red" onclick="return confirm('Delete {{ r.name }}?')">Delete</button></td></tr>
+{% else %}<tr><td colspan="7" style="color:var(--mut)">No students found.</td></tr>{% endfor %}</table></div></form>
+
+<div class="row" style="margin-top:12px">
+{% if page > 1 %}<a class="btn gray" href="?s={{ term }}&mess={{ mf }}&page={{ page-1 }}">‹ Prev</a>{% endif %}
+<span>Page {{ page }} / {{ pages }}</span>
+{% if page < pages %}<a class="btn gray" href="?s={{ term }}&mess={{ mf }}&page={{ page+1 }}">Next ›</a>{% endif %}</div>
+</div>
+{% endblock %}

@@ -1,0 +1,15 @@
+{% extends "base.html" %}{% block body %}
+<h2>Settings</h2>
+<form method="post" enctype="multipart/form-data" class="card"><label>College / university name (shown on every page and the login screen)</label><input name="org_name" value="{{ s.org_name }}" style="width:100%;max-width:400px">
+<h3>College logo</h3>
+{% if logo_v %}<img src="/logo?v={{ logo_v }}" style="max-height:90px;background:#fff;border:1px solid var(--line);border-radius:8px;padding:6px"><br>
+<label style="display:inline;color:var(--ink)"><input type="checkbox" name="remove_logo" style="padding:0"> Remove the logo</label><br><br>{% endif %}
+<input type="file" name="logo" accept="image/png,image/jpeg,image/webp">
+<p style="font-size:13px;color:var(--mut)">PNG with a transparent background looks best. It appears in the top bar, the login page and the browser tab.</p>
+<h3>Meal timings (24-hour) — same for all messes</h3>
+{% for m in MEALS %}<div class="row" style="margin-bottom:8px"><b style="width:100px"><span class="tag {{ m }}">{{ META[m].label }}</span></b>
+<div><label>Start</label><input type="time" name="{{ m }}_start" value="{{ s[m ~ '_start'] }}"></div>
+<div><label>End</label><input type="time" name="{{ m }}_end" value="{{ s[m ~ '_end'] }}"></div></div>{% endfor %}
+<button>Save</button></form>
+<p style="font-size:13px;color:var(--mut)">The WiFi / public-IP restriction is set per mess on the <a href="/admin/messes">Messes</a> page.</p>
+{% endblock %}

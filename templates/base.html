@@ -1,0 +1,16 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{{ brand }}</title>
+{% if logo_v %}<link rel="icon" href="/logo?v={{ logo_v }}">{% endif %}
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+{% block head %}{% endblock %}</head><body>
+<header><div class="brand">{% if logo_v %}<img class="logo" src="/logo?v={{ logo_v }}" alt="">{% else %}🍽️ {% endif %}{{ brand }}</div>
+<nav>{% if user %}
+{% if user.role == 'admin' %}<a href="/admin">Dashboard</a><a href="/admin/messes">Messes</a><a href="/admin/students">Students</a><a href="/scan">📷 Scan</a><a href="/report">Report</a><a href="/admin/settings">Settings</a>
+{% elif user.role == 'mess' %}<a href="/mess">My Mess</a><a href="/scan">📷 Scan</a><a href="/report">Report</a>
+{% else %}<a href="/student">My Mess</a>{% endif %}
+<a href="/password">Password</a><a href="/logout">Logout ({{ user.roll }})</a>{% endif %}</nav></header>
+<main>
+{% for cat, msg in get_flashed_messages(with_categories=true) %}<div class="flash {{ cat }}">{{ msg }}</div>{% endfor %}
+{% block body %}{% endblock %}
+</main></body></html>

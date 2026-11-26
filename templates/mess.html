@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block head %}<meta http-equiv="refresh" content="20">{% endblock %}
+{% block body %}
+{% if not mess %}<h2>No mess linked</h2>{% else %}
+<h2>{{ mess.name }}</h2>
+<p style="color:var(--mut);margin-top:-8px">{{ today }} · auto-refreshes every 20 s</p>
+
+<a class="btn scanbtn" href="/scan">📷 Scan student QR</a>
+<div class="card row" style="align-items:center">
+  <form method="post" action="/lookup" class="row" style="flex:1">
+    <input name="code" placeholder="Type 6-digit code" inputmode="numeric" maxlength="6" style="font-size:20px;flex:1;min-width:150px" required>
+    <button style="font-size:18px">Verify</button></form>
+  <small style="color:var(--mut)">Or scan the student's QR with this phone's camera — the result opens here.</small>
+</div>
+
+<div class="kpis">
+  <div class="kpi"><b>{{ stats.registered }}</b><span>Registered students</span></div>
+  <div class="kpi"><b>{{ total_entered }}</b><span>Entries today (all meals)</span></div>
+  <div class="kpi"><b>{{ cur and META[cur].label or '—' }}</b><span>Current meal</span></div>
+</div>
+
+<div class="grid3">
+{% for m in MEALS %}{% set s = stats.meals[m] %}
+<div class="stat {{ m }} {{ 'now' if cur == m }}">
+  <h3>{{ META[m].icon }} {{ META[m].label }}</h3>
+  <div class="big">{{ s.entered }}<span style="font-size:20px"> / {{ s.expected }}</span></div>
+  <small>entered / expected today ({{ s.absent }} marked not coming)</small>
+  <small>🍲 Prepare for tomorrow: <b>{{ tomorrow.meals[m].expected }}</b> students ({{ tomorrow.meals[m].absent }} not coming)</small>
+</div>{% endfor %}
+</div>
+
+<div class="card" style="margin-top:16px"><h3>Latest entries</h3>
+<table><tr><th>Time</th><th>ID</th><th>Name</th><th>Meal</th></tr>
+{% for r in recent %}<tr><td>{{ r.used_at[11:16] }}</td><td>{{ r.roll }}</td><td>{{ r.name }}</td>
+<td><span class="tag {{ r.meal }}">{{ META[r.meal].label }}</span></td></tr>
+{% else %}<tr><td colspan="4" style="color:var(--mut)">No entries yet today.</td></tr>{% endfor %}</table></div>
+{% endif %}
+{% endblock %}

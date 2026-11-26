@@ -1,0 +1,22 @@
+{% extends "base.html" %}{% block body %}
+{% if status == 'ok' %}<div class="verify ok"><h1>✓ ALLOW</h1>
+{% elif status == 'used' %}<div class="verify bad"><h1>✗ ALREADY USED</h1>
+{% elif status == 'wrongmeal' %}<div class="verify warn"><h1>WRONG MEAL TIME</h1>
+{% elif status == 'wrongmess' %}<div class="verify bad"><h1>✗ WRONG MESS</h1>
+{% elif status == 'blocked' %}<div class="verify bad"><h1>✗ STUDENT BLOCKED</h1>
+{% else %}<div class="verify bad"><h1>✗ INVALID CODE</h1>{% endif %}
+{% if p %}
+  {% if pv %}<img class="vphoto" src="/photo/{{ p.student_id }}?v={{ pv }}" alt="photo">
+  {% elif status != 'wrongmess' %}<div class="nophoto">📷 No photo on record — check the student's ID card</div>{% endif %}
+  <div class="nm">{{ p.name }}</div><div>ID: {{ p.roll }}</div>
+  <div style="margin-top:10px"><span class="tag {{ p.meal }}" style="font-size:18px;padding:4px 14px;background:#fff;color:#111">{{ META[p.meal].label }}</span></div>
+  {% if status == 'wrongmess' %}<div style="margin-top:8px;font-size:20px">This student is allotted to <b>{{ p.mess_name }}</b></div>{% endif %}
+  {% if status == 'used' %}<div style="margin-top:8px">Entered at {{ p.used_at[11:16] }}</div>{% endif %}
+  {% if status == 'wrongmeal' %}<div style="margin-top:8px">This pass is for {{ META[p.meal].label }}, current meal is {{ META[cur].label if cur else 'none' }}</div>{% endif %}
+{% else %}<div>Code not found for today. Ask the student to open the page again.</div>{% endif %}
+</div>
+<form method="post" action="/lookup" class="row" style="margin-top:16px">
+<input name="code" placeholder="Next code" inputmode="numeric" maxlength="6" style="flex:1;font-size:20px" autofocus>
+<button>Verify</button><a class="btn gray" href="/">Home</a></form>
+<a class="btn scanbtn" href="/scan" style="margin-top:12px">📷 Scan next student</a>
+{% endblock %}

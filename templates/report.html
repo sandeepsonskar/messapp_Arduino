@@ -1,0 +1,15 @@
+{% extends "base.html" %}{% block body %}
+<h2>Daily Report</h2>
+<form class="row card"><div><label>Date</label><input type="date" name="date" value="{{ d }}"></div>
+{% if user.role == 'admin' %}<div><label>Mess</label><select name="mess"><option value="">All messes</option>
+{% for m in all_messes %}<option value="{{ m.id }}" {{ 'selected' if mess_id==m.id }}>{{ m.name }}</option>{% endfor %}</select></div>{% endif %}
+<button>Show</button><a class="btn gray" href="?date={{ d }}&mess={{ mess_id or '' }}&csv=1">Download CSV</a></form>
+<div class="grid3">{% for m in MEALS %}<div class="stat {{ m }}"><h3>{{ META[m].label }}</h3>
+<div class="big">{{ summary[m].entered }}<span style="font-size:20px"> / {{ summary[m].expected }}</span></div><small>attended / expected</small>
+<small>Registered: {{ registered }} · Marked not coming: {{ summary[m].absent }}</small></div>{% endfor %}</div>
+<div class="card" style="margin-top:16px;overflow-x:auto"><table><tr><th>Mess</th><th>Meal</th><th>Time</th><th>ID</th><th>Name</th><th>Marked absent?</th></tr>
+{% for r in rows %}<tr><td>{{ r.mess_name }}</td><td><span class="tag {{ r.meal }}">{{ META[r.meal].label }}</span></td><td>{{ r.used_at[11:16] }}</td>
+<td>{{ r.roll }}</td><td>{{ r.name }}</td><td>{{ 'Yes' if r.absent else 'No' }}</td></tr>
+{% else %}<tr><td colspan="6" style="color:var(--mut)">No entries on this date.</td></tr>{% endfor %}</table>
+<p style="font-size:12px;color:var(--mut)">Showing the first 500 entries — download the CSV for the full list.</p></div>
+{% endblock %}

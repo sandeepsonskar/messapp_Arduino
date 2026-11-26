@@ -1,0 +1,33 @@
+{% extends "base.html" %}{% block body %}
+<h2>Messes &amp; supervisor logins</h2>
+
+<div class="card"><h3>Add a mess</h3>
+<form method="post"><input type="hidden" name="act" value="add"><div class="row">
+<div><label>Mess name</label><input name="name" placeholder="e.g. Mess A (Boys Hostel)" required></div>
+<div><label>Supervisor login ID</label><input name="sup_roll" required></div>
+<div><label>Supervisor name</label><input name="sup_name"></div>
+<div><label>Password (default = login ID)</label><input name="sup_pw"></div>
+<button>Create mess</button></div></form></div>
+
+{% for d in data %}{% set m = d.m %}
+<div class="card">
+  <form method="post" class="row"><input type="hidden" name="act" value="update"><input type="hidden" name="mess_id" value="{{ m.id }}">
+    <div><label>Mess name</label><input name="name" value="{{ m.name }}" required></div>
+    <div style="flex:1;min-width:220px"><label>Allowed public IPs for passes (blank = no restriction)</label><input name="allowed_ips" value="{{ m.allowed_ips }}" style="width:100%" placeholder="e.g. 203.0.113.25"></div>
+    <button>Save</button>
+    <a class="btn gray" href="/admin/students?mess={{ m.id }}">{{ d.students }} students</a>
+  </form>
+  <table style="margin-top:10px"><tr><th>Supervisor login</th><th>Name</th><th></th></tr>
+  {% for s in d.sups %}<tr><td>{{ s.roll }}</td><td>{{ s.name }}</td><td>
+    <form method="post" class="inline"><input type="hidden" name="uid" value="{{ s.id }}">
+    <button name="act" value="sup_reset" class="gray">Reset PW</button>
+    <button name="act" value="sup_delete" class="red" onclick="return confirm('Delete login {{ s.roll }}?')">Delete</button></form></td></tr>
+  {% else %}<tr><td colspan="3" style="color:var(--mut)">No supervisor login yet.</td></tr>{% endfor %}</table>
+  <form method="post" class="row" style="margin-top:10px"><input type="hidden" name="act" value="add_sup"><input type="hidden" name="mess_id" value="{{ m.id }}">
+    <input name="roll" placeholder="New supervisor login ID" required><input name="name" placeholder="Name"><input name="password" placeholder="Password (default = ID)"><button class="gray">Add supervisor</button></form>
+  <form method="post" style="margin-top:10px"><input type="hidden" name="act" value="delete"><input type="hidden" name="mess_id" value="{{ m.id }}">
+    <button class="red" onclick="return confirm('Delete mess {{ m.name }} and its supervisor logins?')">Delete this mess</button></form>
+</div>
+{% else %}<div class="card" style="color:var(--mut)">No messes yet. Add the first one above.</div>{% endfor %}
+<p style="font-size:13px;color:var(--mut)">Your IP as seen by the server: <b>{{ my_ip }}</b> — open this page from inside a mess's WiFi and copy it into that mess's "Allowed public IPs".</p>
+{% endblock %}

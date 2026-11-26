@@ -1,0 +1,61 @@
+{% extends "base.html" %}{% block body %}
+<h2>Hello, {{ user.name }}</h2>
+{% if my_photo %}<img class="avatar" src="/photo/{{ user.id }}?v={{ my_photo }}" alt="my photo">{% endif %}
+{% if mess %}<p style="margin-top:-8px;color:var(--mut)">Your mess: <b>{{ mess.name }}</b></p>
+{% else %}<div class="flash err">No mess has been allotted to you yet. Please contact the admin.</div>{% endif %}
+
+{% if cur %}<div class="banner {{ cur }}">{{ META[cur].icon }} Now serving: {{ META[cur].label }}</div>
+{% else %}<div class="banner">No meal is being served right now</div>{% endif %}
+
+{% if not my_photo %}<div class="card"><h3>📷 Upload your photo</h3>
+<p style="font-size:14px;color:var(--mut)">The mess supervisor compares this photo with you at the entrance. Use a clear, front-facing photo. You can upload only once — the admin can change it later.</p>
+<form method="post" action="/student/photo" enctype="multipart/form-data" class="row">
+<input type="file" name="photo" accept="image/*" capture="user" required><button>Upload</button></form></div>{% endif %}
+
+{% if mess and cur and not passes[cur] and not in_mess %}<div class="flash err">📶 Connect to the {{ mess.name }} WiFi to get your {{ META[cur].label }} pass — it can only be created inside the mess.</div>{% endif %}
+
+{% for m in MEALS %}{% if passes[m] %}
+<div class="card pass {{ 'done' if passes[m].used_at }}" style="--c:{{ META[m].color }}">
+  <h3>{{ META[m].icon }} {{ META[m].label }} pass — today</h3>
+  {% if passes[m].used_at %}<p><b>✓ Used at {{ passes[m].used_at[11:16] }}</b></p>{% endif %}
+  <div class="qr">{{ passes[m].svg }}</div>
+  <div class="code">{{ passes[m].code }}</div>
+  <p style="color:var(--mut)">Show this QR / code to the mess supervisor at the entrance.</p>
+</div>
+{% endif %}{% endfor %}
+
+<div class="card">
+  <div class="calhead"><a href="?m={{ prev }}">‹</a><b>{{ month_name }}</b><a href="?m={{ nxt }}">›</a></div>
+  <div class="cal">
+    {% for w in ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'] %}<div class="wd">{{ w }}</div>{% endfor %}
+    {% for d in days %}
+    <div class="day {{ 'out' if not d.in_month }} {{ 'today' if d.today }}">
+      <div class="num">{{ d.n }}</div>
+      {% for m in MEALS %}
+      <button type="button" class="chip {{ m }} {{ 'absent' if d.absent[m] else 'on' }} {{ 'used' if d.used[m] }}"
+        data-date="{{ d.iso }}" data-meal="{{ m }}" {{ 'disabled' if not d.future }}>{{ m[0]|upper }}</button>
+      {% endfor %}
+    </div>{% endfor %}
+  </div>
+  <p class="legend" style="margin-top:12px">
+    {% for m in MEALS %}<span><span class="tag {{ m }}">{{ m[0]|upper }}</span> {{ META[m].label }}</span>{% endfor %}
+    <br><small style="color:var(--mut)">By default you are counted as coming to every meal. If you will <b>not</b> come, tap that meal on a future date (it turns grey, struck through). Tap again to undo. ✓ = attended.</small></p>
+</div>
+
+<div class="card"><h3>I will NOT come — date range</h3>
+<form method="post" action="/absence/range"><div class="row">
+  <div><label>From</label><input type="date" name="start" min="{{ tomorrow }}" value="{{ tomorrow }}" required></div>
+  <div><label>To</label><input type="date" name="end" min="{{ tomorrow }}" required></div>
+  <div><label>Meals</label>{% for m in MEALS %}<label style="display:inline;margin-right:8px;color:var(--ink)"><input type="checkbox" name="meals" value="{{ m }}" style="padding:0"> {{ META[m].label }}</label>{% endfor %}</div>
+  <div><label>Action</label><select name="action"><option value="absent">I will NOT come</option><option value="present">I will come again (undo)</option></select></div>
+  <button>Apply</button></div></form></div>
+
+<script>
+document.querySelectorAll('.chip:not(:disabled)').forEach(b=>b.addEventListener('click',async()=>{
+  const absent=!b.classList.contains('absent');
+  const r=await fetch('/api/absence',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({date:b.dataset.date,meal:b.dataset.meal,absent})});
+  if(r.ok){b.classList.toggle('absent',absent);b.classList.toggle('on',!absent);} else alert('Could not save');
+}));
+</script>
+{% endblock %}
