@@ -25,7 +25,7 @@ import com.hoho.android.usbserial.driver.UsbSerialProber
 class MainActivity : AppCompatActivity() {
     companion object {
         // Change this to the HTTPS supervisor address printed by run_local.py.
-        private const val START_URL = "https://YOUR_SERVER_IP:5443/scan"
+        private const val START_URL = "https://100.71.122.1:5443/scan"
         private const val ACTION_USB_PERMISSION = "com.vsipl.messbridge.USB_PERMISSION"
     }
 
